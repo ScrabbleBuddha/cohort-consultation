@@ -4,4 +4,4 @@ compatibility_date = "2024-11-01"
 
 [[kv_namespaces]]
 binding = "SESSIONS_KV"
-id = "PLACEHOLDER_KV_ID"
+id = "cf6e7c12ee76447e988b2a2d6c592261"
