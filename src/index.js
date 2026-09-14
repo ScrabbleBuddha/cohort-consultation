@@ -198,9 +198,10 @@ const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" 
 </svg>`;
 
 const PAGE_HTML = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
 <meta charset="UTF-8">
+<meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cohort Consultation Group — Live Calendar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -541,7 +542,7 @@ const PAGE_HTML = `<!DOCTYPE html>
     <div class="page-gate-box">
       <div class="eyebrow">PAU &middot; 22C</div>
       <h2>Cohort Consultation Group</h2>
-      <input type="password" id="pageGateInput" inputmode="numeric" placeholder="Enter PIN" maxlength="8" autofocus>
+      <input type="text" id="pageGateInput" inputmode="numeric" autocomplete="off" placeholder="Enter PIN" maxlength="8" autofocus>
       <button onclick="checkPageGate()">Enter</button>
       <div class="page-gate-error" id="pageGateError">Incorrect PIN — try again.</div>
     </div>
@@ -574,7 +575,7 @@ const PAGE_HTML = `<!DOCTYPE html>
     <div class="manage-panel" id="managePanel">
       <div class="pin-gate" id="pinGate">
         <label>PIN</label>
-        <input type="password" id="pinInput" placeholder="Enter PIN to manage sessions">
+        <input type="text" id="pinInput" inputmode="numeric" autocomplete="off" placeholder="Enter PIN to manage sessions">
         <button class="submit" onclick="checkPin()">Unlock</button>
       </div>
       <div id="formArea" style="display:none;">
