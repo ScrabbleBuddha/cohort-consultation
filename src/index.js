@@ -1,5 +1,6 @@
 // Cohort Consultation Group — Live Calendar
-// Cloudflare Worker + KV, no login required to view; PIN-gated to manage entries.
+// Cloudflare Worker + KV. Viewing and signing up are open to anyone with the link;
+// adding/editing/removing sessions is PIN-gated.
 
 const MANAGE_PIN = "2022"; // change this, then redeploy, whenever you like
 
@@ -49,7 +50,7 @@ export default {
       });
     }
 
-    // --- API: create or update a session ---
+    // --- API: create or update a session (admin, PIN required) ---
     if (pathname === "/api/sessions" && request.method === "POST") {
       const body = await request.json();
       if (body.pin !== MANAGE_PIN) {
@@ -59,13 +60,16 @@ export default {
         });
       }
       const sessions = await getSessions(env);
+      const existing = sessions.find((s) => s.id === body.id);
       const entry = {
         id: body.id || uid(),
         date: body.date || "",
         time: body.time || "6:30 PM",
         zoomLink: body.zoomLink || "",
         topic: body.topic || "",
+        host: body.host || "",
         status: body.status || "Confirmed",
+        attendees: existing ? existing.attendees || [] : [],
       };
       const idx = sessions.findIndex((s) => s.id === entry.id);
       if (idx >= 0) {
@@ -79,7 +83,39 @@ export default {
       });
     }
 
-    // --- API: delete a session ---
+    // --- API: public RSVP sign-up (no PIN) ---
+    const rsvpMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/rsvp$/);
+    if (rsvpMatch && request.method === "POST") {
+      const id = rsvpMatch[1];
+      const body = await request.json().catch(() => ({}));
+      const name = (body.name || "").trim();
+      if (!name) {
+        return new Response(JSON.stringify({ error: "Name is required" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders() },
+        });
+      }
+      const sessions = await getSessions(env);
+      const session = sessions.find((s) => s.id === id);
+      if (!session) {
+        return new Response(JSON.stringify({ error: "Session not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders() },
+        });
+      }
+      session.attendees = session.attendees || [];
+      session.attendees.push({
+        id: uid(),
+        name,
+        note: (body.note || "").trim(),
+      });
+      await saveSessions(env, sessions);
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders() },
+      });
+    }
+
+    // --- API: delete a session (admin, PIN required) ---
     if (pathname.startsWith("/api/sessions/") && request.method === "DELETE") {
       const id = pathname.split("/").pop();
       const body = await request.json().catch(() => ({}));
@@ -108,6 +144,58 @@ export default {
   },
 };
 
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e3bc63"/>
+      <stop offset="100%" stop-color="#c9a84c"/>
+    </radialGradient>
+  </defs>
+  <g stroke="#c9a84c" stroke-width="2" opacity="0.28">
+    <line x1="390" y1="90" x2="390" y2="10"/>
+    <line x1="390" y1="90" x2="330" y2="20"/>
+    <line x1="390" y1="90" x2="450" y2="20"/>
+    <line x1="390" y1="90" x2="290" y2="45"/>
+    <line x1="390" y1="90" x2="490" y2="45"/>
+    <line x1="390" y1="90" x2="270" y2="90"/>
+    <line x1="390" y1="90" x2="510" y2="90"/>
+  </g>
+  <circle cx="390" cy="90" r="46" fill="url(#sunGlow)"/>
+  <circle cx="390" cy="90" r="52" fill="none" stroke="#c9a84c" stroke-width="1.5" opacity="0.4"/>
+  <path d="M0,150 C100,112 200,132 300,102 C400,72 500,112 600,92 C680,77 740,97 780,88 L780,200 L0,200 Z" fill="#a9bcae" opacity="0.55"/>
+  <path d="M0,172 C80,142 160,162 260,138 C360,112 460,152 560,128 C640,108 720,138 780,124 L780,200 L0,200 Z" fill="#6f8c7c" opacity="0.75"/>
+  <path d="M0,200 C90,166 180,186 280,162 C380,138 480,176 580,158 C660,144 730,166 780,154 L780,200 L0,200 Z" fill="#2d4a3e"/>
+  <g fill="#6f8c7c" opacity="0.8" transform="translate(56,118) scale(0.55)">
+    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <rect x="14" y="80" width="12" height="14" fill="#5a7768"/>
+  </g>
+  <g fill="#6f8c7c" opacity="0.8" transform="translate(92,128) scale(0.4)">
+    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <rect x="14" y="80" width="12" height="14" fill="#5a7768"/>
+  </g>
+  <g fill="#233d33" transform="translate(600,88) scale(0.85)">
+    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <rect x="14" y="80" width="12" height="16" fill="#1b3129"/>
+  </g>
+  <g fill="#233d33" transform="translate(645,102) scale(1.05)">
+    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <rect x="14" y="80" width="12" height="18" fill="#1b3129"/>
+  </g>
+  <g fill="#2d4a3e" transform="translate(700,95) scale(0.9)">
+    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <rect x="14" y="80" width="12" height="16" fill="#1b3129"/>
+  </g>
+  <g fill="#233d33" transform="translate(742,108) scale(0.7)">
+    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <rect x="14" y="80" width="12" height="16" fill="#1b3129"/>
+  </g>
+  <g fill="#c9a84c" opacity="0.85">
+    <circle cx="130" cy="182" r="3.5"/><circle cx="142" cy="188" r="3"/><circle cx="120" cy="190" r="2.5"/>
+    <line x1="130" y1="182" x2="128" y2="196" stroke="#6f8c7c" stroke-width="1.5"/>
+    <line x1="142" y1="188" x2="141" y2="198" stroke="#6f8c7c" stroke-width="1.5"/>
+  </g>
+</svg>`;
+
 const PAGE_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,6 +205,7 @@ const PAGE_HTML = `<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/[email protected]/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --green: #2d4a3e;
@@ -136,7 +225,22 @@ const PAGE_HTML = `<!DOCTYPE html>
   .wrap {
     max-width: 780px;
     margin: 0 auto;
-    padding: 64px 24px 96px;
+    padding: 0 24px 96px;
+  }
+  .logo-banner {
+    width: 100%;
+    height: 150px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .logo-banner svg { width: 100%; height: 100%; display: block; }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
   }
   .eyebrow {
     font-size: 12px;
@@ -149,16 +253,36 @@ const PAGE_HTML = `<!DOCTYPE html>
   h1 {
     font-family: 'Cormorant Garamond', serif;
     font-weight: 500;
-    font-size: 42px;
+    font-size: 44px;
     margin: 0 0 8px;
     letter-spacing: 0.01em;
   }
   .lede {
     max-width: 560px;
     color: rgba(45,74,62,0.85);
-    margin-bottom: 40px;
+    margin-bottom: 8px;
     font-size: 15px;
   }
+  .top-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+  .top-actions button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--green);
+    font-family: 'Jost', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 9px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .top-actions button:hover { background: rgba(45,74,62,0.06); }
+
   .section-label {
     font-size: 11px;
     text-transform: uppercase;
@@ -173,6 +297,8 @@ const PAGE_HTML = `<!DOCTYPE html>
     border: 1px solid var(--border);
     padding: 22px 24px;
     margin-bottom: 14px;
+  }
+  .card-top {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -220,7 +346,62 @@ const PAGE_HTML = `<!DOCTYPE html>
     font-style: italic;
     padding: 20px 0;
   }
-  .past .card { opacity: 0.5; }
+  .past .card { opacity: 0.55; }
+
+  .host-tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    font-weight: 500;
+  }
+  .attendees {
+    margin-top: 10px;
+    font-size: 13px;
+    color: rgba(45,74,62,0.85);
+  }
+  .attendees.empty { color: rgba(45,74,62,0.5); font-style: italic; }
+  .attendees-label { font-weight: 500; color: var(--green); }
+  .attendees .note { color: rgba(45,74,62,0.6); font-style: italic; }
+
+  .rsvp-form { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 12px; }
+  .rsvp-toggle {
+    background: none; border: none; color: var(--green);
+    font-family: 'Jost', sans-serif; font-size: 12px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; padding: 0; text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .rsvp-fields {
+    display: none;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .rsvp-fields.open { display: flex; }
+  .rsvp-fields input {
+    flex: 1;
+    min-width: 140px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    background: white;
+    font-family: 'Jost', sans-serif;
+    font-size: 13px;
+    color: var(--green);
+  }
+  .rsvp-fields button {
+    background: var(--green);
+    color: var(--cream);
+    border: none;
+    padding: 8px 16px;
+    font-family: 'Jost', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+  }
 
   .manage-toggle {
     margin-top: 56px;
@@ -287,16 +468,36 @@ const PAGE_HTML = `<!DOCTYPE html>
     cursor: pointer;
     margin-left: 8px;
   }
-  .pin-gate {
-    margin-bottom: 16px;
+  .pin-gate { margin-bottom: 16px; }
+
+  @media print {
+    .top-actions, .manage-toggle, .manage-panel, .rsvp-form { display: none !important; }
+    .logo-banner { height: 100px; }
+  }
+
+  @media (max-width: 720px) {
+    h1 { font-size: 34px; }
+    .header-row { flex-direction: column; }
+    .top-actions { width: 100%; }
   }
 </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="eyebrow">PAU &middot; 22C &middot; Graduated &amp; Current Students</div>
-    <h1>Cohort Consultation Group</h1>
-    <div class="lede">A running schedule of monthly consultation sessions — Sundays, 6:30 PM, over Zoom. Dates are added here as they're set.</div>
+    <div class="logo-banner">${LOGO_SVG}</div>
+
+    <div class="header-row">
+      <div>
+        <div class="eyebrow">PAU &middot; 22C &middot; Graduated &amp; Current Students</div>
+        <h1>Cohort Consultation Group</h1>
+        <div class="lede">A running schedule of monthly consultation sessions — Sundays, 6:30 PM, over Zoom. Sign up below so your host knows to expect you.</div>
+      </div>
+      <div class="top-actions">
+        <button onclick="window.print()">Print</button>
+        <button onclick="downloadCSV()">Download CSV</button>
+        <button onclick="downloadXLSX()">Download Excel</button>
+      </div>
+    </div>
 
     <div class="section-label">Upcoming Sessions</div>
     <div id="upcoming"></div>
@@ -317,6 +518,8 @@ const PAGE_HTML = `<!DOCTYPE html>
         <input type="date" id="fDate">
         <label>Time</label>
         <input type="text" id="fTime" value="6:30 PM">
+        <label>Monthly Host</label>
+        <input type="text" id="fHost" placeholder="Who's hosting this session?">
         <label>Zoom Link</label>
         <input type="text" id="fZoom" placeholder="https://zoom.us/j/...">
         <label>Topic / Notes (optional)</label>
@@ -336,6 +539,10 @@ const PAGE_HTML = `<!DOCTYPE html>
 let PIN = null;
 let ALL_SESSIONS = [];
 
+function esc(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 function fmtDate(d) {
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -353,11 +560,11 @@ function render() {
   const past = ALL_SESSIONS.filter(s => s.date < today).reverse();
 
   document.getElementById('upcoming').innerHTML = upcoming.length
-    ? upcoming.map(renderCard).join('')
+    ? upcoming.map(s => renderCard(s, true)).join('')
     : '<div class="empty-note">No sessions scheduled yet — check back soon.</div>';
 
   document.getElementById('past').innerHTML = past.length
-    ? past.map(renderCard).join('')
+    ? past.map(s => renderCard(s, false)).join('')
     : '<div class="empty-note">No past sessions yet.</div>';
 
   if (document.getElementById('formArea').style.display !== 'none') {
@@ -365,18 +572,59 @@ function render() {
   }
 }
 
-function renderCard(s) {
+function renderCard(s, isUpcoming) {
+  const attendees = s.attendees || [];
+  const attendeesHtml = attendees.length
+    ? '<div class="attendees"><span class="attendees-label">Attending (' + attendees.length + '):</span> ' +
+      attendees.map(a => esc(a.name) + (a.note ? ' <span class="note">— ' + esc(a.note) + '</span>' : '')).join(', ') +
+      '</div>'
+    : '<div class="attendees empty">No one signed up yet</div>';
+
+  const hostHtml = s.host ? '<div class="host-tag">Hosting: ' + esc(s.host) + '</div>' : '';
+
+  const rsvpHtml = isUpcoming && s.status !== 'Cancelled' ? \`
+    <div class="rsvp-form">
+      <button class="rsvp-toggle" onclick="toggleRsvp('\${s.id}')">+ Sign up</button>
+      <div class="rsvp-fields" id="rsvp-fields-\${s.id}">
+        <input type="text" id="rsvp-name-\${s.id}" placeholder="Your name">
+        <input type="text" id="rsvp-note-\${s.id}" placeholder="Note (optional)">
+        <button onclick="submitRsvp('\${s.id}')">Add me</button>
+      </div>
+    </div>\` : '';
+
   return \`<div class="card">
-    <div>
-      <div class="date-block">\${fmtDate(s.date)}</div>
-      <div class="time">\${s.time}</div>
+    <div class="card-top">
+      <div>
+        <div class="date-block">\${fmtDate(s.date)}</div>
+        <div class="time">\${esc(s.time)}</div>
+      </div>
+      <div class="meta">
+        \${s.topic ? '<div class="topic">' + esc(s.topic) + '</div>' : ''}
+        \${s.zoomLink ? '<div class="zoom-link"><a href="' + esc(s.zoomLink) + '" target="_blank">Join Zoom</a></div>' : '<div class="zoom-link" style="color:rgba(45,74,62,0.5)">Zoom link TBA</div>'}
+        \${hostHtml}
+      </div>
+      <div class="status-tag status-\${s.status}">\${s.status}</div>
     </div>
-    <div class="meta">
-      \${s.topic ? '<div class="topic">' + s.topic + '</div>' : ''}
-      \${s.zoomLink ? '<div class="zoom-link"><a href="' + s.zoomLink + '" target="_blank">Join Zoom</a></div>' : '<div class="zoom-link" style="color:rgba(45,74,62,0.5)">Zoom link TBA</div>'}
-    </div>
-    <div class="status-tag status-\${s.status}">\${s.status}</div>
+    \${attendeesHtml}
+    \${rsvpHtml}
   </div>\`;
+}
+
+function toggleRsvp(id) {
+  document.getElementById('rsvp-fields-' + id).classList.toggle('open');
+}
+
+async function submitRsvp(id) {
+  const name = document.getElementById('rsvp-name-' + id).value.trim();
+  const note = document.getElementById('rsvp-note-' + id).value.trim();
+  if (!name) { alert('Please enter your name.'); return; }
+  const res = await fetch('/api/sessions/' + id + '/rsvp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, note }),
+  });
+  if (!res.ok) { alert('Something went wrong — try again.'); return; }
+  await loadSessions();
 }
 
 function toggleManage() {
@@ -385,7 +633,6 @@ function toggleManage() {
 
 function checkPin() {
   const val = document.getElementById('pinInput').value;
-  // Real validation happens server-side on save; this just gates the UI.
   PIN = val;
   document.getElementById('pinGate').style.display = 'none';
   document.getElementById('formArea').style.display = 'block';
@@ -396,7 +643,7 @@ function renderExistingList() {
   const el = document.getElementById('existingList');
   el.innerHTML = '<label>Existing Sessions</label>' + ALL_SESSIONS.map(s => \`
     <div class="existing-row">
-      <span>\${s.date} — \${s.time} (\${s.status})</span>
+      <span>\${esc(s.date)} — \${esc(s.time)} (\${esc(s.status)})</span>
       <span>
         <button onclick='editSession(\${JSON.stringify(JSON.stringify(s))})'>Edit</button>
         <button onclick="deleteSession('\${s.id}')">Delete</button>
@@ -409,6 +656,7 @@ function editSession(jsonStr) {
   document.getElementById('editId').value = s.id;
   document.getElementById('fDate').value = s.date;
   document.getElementById('fTime').value = s.time;
+  document.getElementById('fHost').value = s.host || '';
   document.getElementById('fZoom').value = s.zoomLink;
   document.getElementById('fTopic').value = s.topic;
   document.getElementById('fStatus').value = s.status;
@@ -420,6 +668,7 @@ async function submitSession() {
     id: document.getElementById('editId').value || undefined,
     date: document.getElementById('fDate').value,
     time: document.getElementById('fTime').value,
+    host: document.getElementById('fHost').value,
     zoomLink: document.getElementById('fZoom').value,
     topic: document.getElementById('fTopic').value,
     status: document.getElementById('fStatus').value,
@@ -435,6 +684,7 @@ async function submitSession() {
   }
   document.getElementById('editId').value = '';
   document.getElementById('fDate').value = '';
+  document.getElementById('fHost').value = '';
   document.getElementById('fZoom').value = '';
   document.getElementById('fTopic').value = '';
   document.getElementById('fStatus').value = 'Confirmed';
@@ -455,8 +705,37 @@ async function deleteSession(id) {
   await loadSessions();
 }
 
+function downloadCSV() {
+  const headers = ['Date','Time','Topic','Host','Status','ZoomLink','Attendees'];
+  const rows = ALL_SESSIONS.map(s => [
+    s.date, s.time, s.topic || '', s.host || '', s.status, s.zoomLink || '',
+    (s.attendees || []).map(a => a.name + (a.note ? ' (' + a.note + ')' : '')).join('; ')
+  ]);
+  const csv = [headers, ...rows]
+    .map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(','))
+    .join('\\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cohort-consultation-sessions.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadXLSX() {
+  const rows = ALL_SESSIONS.map(s => ({
+    Date: s.date, Time: s.time, Topic: s.topic || '', Host: s.host || '',
+    Status: s.status, ZoomLink: s.zoomLink || '',
+    Attendees: (s.attendees || []).map(a => a.name + (a.note ? ' (' + a.note + ')' : '')).join('; ')
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sessions');
+  XLSX.writeFile(wb, 'cohort-consultation-sessions.xlsx');
+}
+
 loadSessions();
 </script>
 </body>
 </html>`;
-
