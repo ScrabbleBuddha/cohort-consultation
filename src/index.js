@@ -2,7 +2,7 @@
 // Cloudflare Worker + KV. Viewing and signing up are open to anyone with the link;
 // adding/editing/removing sessions is PIN-gated.
 
-const MANAGE_PIN = "2022"; // gates adding/editing/deleting sessions — change then redeploy anytime
+const MANAGE_PIN = "2026"; // gates adding/editing/deleting sessions — shared with PAGE_PIN so any cohort member can manage their own week
 const PAGE_PIN = "2026"; // gates viewing the page at all — change then redeploy anytime
 
 const KV_KEY = "sessions";
