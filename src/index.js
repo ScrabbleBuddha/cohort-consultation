@@ -2,7 +2,8 @@
 // Cloudflare Worker + KV. Viewing and signing up are open to anyone with the link;
 // adding/editing/removing sessions is PIN-gated.
 
-const MANAGE_PIN = "2022"; // change this, then redeploy, whenever you like
+const MANAGE_PIN = "2022"; // gates adding/editing/deleting sessions — change then redeploy anytime
+const PAGE_PIN = "2026"; // gates viewing the page at all — change then redeploy anytime
 
 const KV_KEY = "sessions";
 
@@ -227,6 +228,26 @@ const PAGE_HTML = `<!DOCTYPE html>
     margin: 0 auto;
     padding: 0 24px 96px;
   }
+  .page-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: 14px 0 2px;
+  }
+  .page-toolbar button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: rgba(45,74,62,0.55);
+    font-family: 'Jost', sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .page-toolbar button:hover { color: var(--green); }
+
   .logo-banner {
     width: 100%;
     height: 150px;
@@ -263,25 +284,6 @@ const PAGE_HTML = `<!DOCTYPE html>
     margin-bottom: 8px;
     font-size: 15px;
   }
-  .top-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding-top: 4px;
-  }
-  .top-actions button {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--green);
-    font-family: 'Jost', sans-serif;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    padding: 9px 14px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .top-actions button:hover { background: rgba(45,74,62,0.06); }
 
   .section-label {
     font-size: 11px;
@@ -470,20 +472,88 @@ const PAGE_HTML = `<!DOCTYPE html>
   }
   .pin-gate { margin-bottom: 16px; }
 
+  .page-gate-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--cream);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .page-gate-box {
+    text-align: center;
+    max-width: 320px;
+    padding: 0 24px;
+  }
+  .page-gate-box .eyebrow { margin-bottom: 6px; }
+  .page-gate-box h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    font-size: 28px;
+    margin: 0 0 20px;
+  }
+  .page-gate-box input {
+    width: 100%;
+    text-align: center;
+    letter-spacing: 0.3em;
+    font-size: 20px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--green);
+    font-family: 'Jost', sans-serif;
+    margin-bottom: 14px;
+  }
+  .page-gate-box button {
+    width: 100%;
+    background: var(--green);
+    color: var(--cream);
+    border: none;
+    padding: 12px 20px;
+    font-family: 'Jost', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .page-gate-error {
+    color: #b04a3a;
+    font-size: 12px;
+    margin-top: 10px;
+    display: none;
+  }
+  body.locked .wrap { display: none; }
+
   @media print {
-    .top-actions, .manage-toggle, .manage-panel, .rsvp-form { display: none !important; }
+    .page-toolbar, .manage-toggle, .manage-panel, .rsvp-form { display: none !important; }
     .logo-banner { height: 100px; }
   }
 
   @media (max-width: 720px) {
     h1 { font-size: 34px; }
     .header-row { flex-direction: column; }
-    .top-actions { width: 100%; }
   }
 </style>
 </head>
-<body>
+<body class="locked">
+  <div class="page-gate-overlay" id="pageGate">
+    <div class="page-gate-box">
+      <div class="eyebrow">PAU &middot; 22C</div>
+      <h2>Cohort Consultation Group</h2>
+      <input type="password" id="pageGateInput" inputmode="numeric" placeholder="Enter PIN" maxlength="8" autofocus>
+      <button onclick="checkPageGate()">Enter</button>
+      <div class="page-gate-error" id="pageGateError">Incorrect PIN — try again.</div>
+    </div>
+  </div>
+
   <div class="wrap">
+    <div class="page-toolbar">
+      <button onclick="window.print()">Print</button>
+      <button onclick="downloadCSV()">CSV</button>
+      <button onclick="downloadXLSX()">Excel</button>
+    </div>
+
     <div class="logo-banner">${LOGO_SVG}</div>
 
     <div class="header-row">
@@ -491,11 +561,6 @@ const PAGE_HTML = `<!DOCTYPE html>
         <div class="eyebrow">PAU &middot; 22C &middot; Graduated &amp; Current Students</div>
         <h1>Cohort Consultation Group</h1>
         <div class="lede">A running schedule of monthly consultation sessions — Sundays, 6:30 PM, over Zoom. Sign up below so your host knows to expect you.</div>
-      </div>
-      <div class="top-actions">
-        <button onclick="window.print()">Print</button>
-        <button onclick="downloadCSV()">Download CSV</button>
-        <button onclick="downloadXLSX()">Download Excel</button>
       </div>
     </div>
 
@@ -536,6 +601,7 @@ const PAGE_HTML = `<!DOCTYPE html>
   </div>
 
 <script>
+const PAGE_PIN = "${PAGE_PIN}";
 let PIN = null;
 let ALL_SESSIONS = [];
 
@@ -736,6 +802,27 @@ function downloadXLSX() {
 }
 
 loadSessions();
+
+function checkPageGate() {
+  const val = document.getElementById('pageGateInput').value;
+  if (val === PAGE_PIN) {
+    sessionStorage.setItem('ccgUnlocked', 'yes');
+    document.body.classList.remove('locked');
+    document.getElementById('pageGate').style.display = 'none';
+  } else {
+    document.getElementById('pageGateError').style.display = 'block';
+  }
+}
+
+document.getElementById('pageGateInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') checkPageGate();
+});
+
+if (sessionStorage.getItem('ccgUnlocked') === 'yes') {
+  document.body.classList.remove('locked');
+  document.getElementById('pageGate').style.display = 'none';
+}
+
 </script>
 </body>
 </html>`;
