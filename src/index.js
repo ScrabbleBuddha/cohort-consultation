@@ -145,14 +145,17 @@ export default {
   },
 };
 
-const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" preserveAspectRatio="xMidYMid slice">
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" width="780" height="200">
   <g transform="translate(780,0) scale(-1,1)">
+    
   <defs>
     <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#e3bc63"/>
       <stop offset="100%" stop-color="#c9a84c"/>
     </radialGradient>
   </defs>
+
+  <!-- sun rays -->
   <g stroke="#c9a84c" stroke-width="2" opacity="0.28">
     <line x1="390" y1="90" x2="390" y2="10"/>
     <line x1="390" y1="90" x2="330" y2="20"/>
@@ -162,40 +165,72 @@ const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" 
     <line x1="390" y1="90" x2="270" y2="90"/>
     <line x1="390" y1="90" x2="510" y2="90"/>
   </g>
+
+  <!-- sun -->
   <circle cx="390" cy="90" r="46" fill="url(#sunGlow)"/>
   <circle cx="390" cy="90" r="52" fill="none" stroke="#c9a84c" stroke-width="1.5" opacity="0.4"/>
-  <path d="M0,150 C100,112 200,132 300,102 C400,72 500,112 600,92 C680,77 740,97 780,88 L780,200 L0,200 Z" fill="#a9bcae" opacity="0.55"/>
-  <path d="M0,172 C80,142 160,162 260,138 C360,112 460,152 560,128 C640,108 720,138 780,124 L780,200 L0,200 Z" fill="#6f8c7c" opacity="0.75"/>
-  <path d="M0,200 C90,166 180,186 280,162 C380,138 480,176 580,158 C660,144 730,166 780,154 L780,200 L0,200 Z" fill="#2d4a3e"/>
+
+  <!-- back mountain layer -->
+  <path d="M0,150 C100,112 200,132 300,102 C400,72 500,112 600,92 C680,77 740,97 780,88 L780,200 L0,200 Z"
+        fill="#a9bcae" opacity="0.55"/>
+
+  <!-- mid mountain layer -->
+  <path d="M0,172 C80,142 160,162 260,138 C360,112 460,152 560,128 C640,108 720,138 780,124 L780,200 L0,200 Z"
+        fill="#6f8c7c" opacity="0.75"/>
+
+  <!-- front mountain layer -->
+  <path d="M0,200 C90,166 180,186 280,162 C380,138 480,176 580,158 C660,144 730,166 780,154 L780,200 L0,200 Z"
+        fill="#2d4a3e"/>
+
+  <!-- small far-left tree cluster, muted for depth -->
   <g fill="#6f8c7c" opacity="0.8" transform="translate(56,118) scale(0.55)">
-    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <polygon points="20,0 0,35 40,35"/>
+    <polygon points="20,15 -4,55 44,55"/>
+    <polygon points="20,32 -8,80 48,80"/>
     <rect x="14" y="80" width="12" height="14" fill="#5a7768"/>
   </g>
   <g fill="#6f8c7c" opacity="0.8" transform="translate(92,128) scale(0.4)">
-    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <polygon points="20,0 0,35 40,35"/>
+    <polygon points="20,15 -4,55 44,55"/>
+    <polygon points="20,32 -8,80 48,80"/>
     <rect x="14" y="80" width="12" height="14" fill="#5a7768"/>
   </g>
+
+  <!-- right pine cluster, foreground -->
   <g fill="#233d33" transform="translate(600,88) scale(0.85)">
-    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <polygon points="20,0 0,35 40,35"/>
+    <polygon points="20,15 -4,55 44,55"/>
+    <polygon points="20,32 -8,80 48,80"/>
     <rect x="14" y="80" width="12" height="16" fill="#1b3129"/>
   </g>
   <g fill="#233d33" transform="translate(645,102) scale(1.05)">
-    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <polygon points="20,0 0,35 40,35"/>
+    <polygon points="20,15 -4,55 44,55"/>
+    <polygon points="20,32 -8,80 48,80"/>
     <rect x="14" y="80" width="12" height="18" fill="#1b3129"/>
   </g>
   <g fill="#2d4a3e" transform="translate(700,95) scale(0.9)">
-    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <polygon points="20,0 0,35 40,35"/>
+    <polygon points="20,15 -4,55 44,55"/>
+    <polygon points="20,32 -8,80 48,80"/>
     <rect x="14" y="80" width="12" height="16" fill="#1b3129"/>
   </g>
   <g fill="#233d33" transform="translate(742,108) scale(0.7)">
-    <polygon points="20,0 0,35 40,35"/><polygon points="20,15 -4,55 44,55"/><polygon points="20,32 -8,80 48,80"/>
+    <polygon points="20,0 0,35 40,35"/>
+    <polygon points="20,15 -4,55 44,55"/>
+    <polygon points="20,32 -8,80 48,80"/>
     <rect x="14" y="80" width="12" height="16" fill="#1b3129"/>
   </g>
+
+  <!-- small gold wildflower accents, bottom left -->
   <g fill="#c9a84c" opacity="0.85">
-    <circle cx="130" cy="182" r="3.5"/><circle cx="142" cy="188" r="3"/><circle cx="120" cy="190" r="2.5"/>
+    <circle cx="130" cy="182" r="3.5"/>
+    <circle cx="142" cy="188" r="3"/>
+    <circle cx="120" cy="190" r="2.5"/>
     <line x1="130" y1="182" x2="128" y2="196" stroke="#6f8c7c" stroke-width="1.5"/>
     <line x1="142" y1="188" x2="141" y2="198" stroke="#6f8c7c" stroke-width="1.5"/>
   </g>
+
   </g>
 </svg>`;
 
@@ -237,7 +272,7 @@ const PAGE_HTML = `<!DOCTYPE html>
     gap: 16px;
     padding: 14px 0 2px;
   }
-  .page-toolbar button {
+  .page-toolbar button, .page-toolbar a {
     background: none;
     border: none;
     padding: 0;
@@ -248,8 +283,9 @@ const PAGE_HTML = `<!DOCTYPE html>
     letter-spacing: 0.08em;
     cursor: pointer;
     white-space: nowrap;
+    text-decoration: none;
   }
-  .page-toolbar button:hover { color: var(--green); }
+  .page-toolbar button:hover, .page-toolbar a:hover { color: var(--green); }
 
   .logo-banner {
     width: 100%;
@@ -552,6 +588,7 @@ const PAGE_HTML = `<!DOCTYPE html>
 
   <div class="wrap">
     <div class="page-toolbar">
+      <a href="https://drive.google.com/drive/folders/1_lM3mN5Mx0p1ZQjq5Qh0Y1QkVZiLGPYO?usp=sharing" target="_blank" rel="noopener">Drive</a>
       <button onclick="window.print()">Print</button>
       <button onclick="downloadCSV()">CSV</button>
       <button onclick="downloadXLSX()">Excel</button>
