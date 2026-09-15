@@ -146,6 +146,7 @@ export default {
 };
 
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" preserveAspectRatio="xMidYMid slice">
+  <g transform="translate(780,0) scale(-1,1)">
   <defs>
     <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#e3bc63"/>
@@ -194,6 +195,7 @@ const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" 
     <circle cx="130" cy="182" r="3.5"/><circle cx="142" cy="188" r="3"/><circle cx="120" cy="190" r="2.5"/>
     <line x1="130" y1="182" x2="128" y2="196" stroke="#6f8c7c" stroke-width="1.5"/>
     <line x1="142" y1="188" x2="141" y2="198" stroke="#6f8c7c" stroke-width="1.5"/>
+  </g>
   </g>
 </svg>`;
 
